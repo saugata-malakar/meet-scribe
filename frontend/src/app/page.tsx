@@ -1,14 +1,7 @@
 "use client";
-import dynamic from "next/dynamic";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Zap, Mic, Brain, FileText, Shield, ArrowRight, Github, ChevronDown } from "lucide-react";
+import { Zap, Mic, Brain, FileText, Shield, ArrowRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui";
-
-const NeuralScene = dynamic(() => import("@/components/three/NeuralScene"), {
-  ssr: false,
-  loading: () => <div className="w-full h-full" />,
-});
 
 const features = [
   {
@@ -38,27 +31,21 @@ const features = [
 ];
 
 const accentStyles: Record<string, string> = {
-  plasma: "border-plasma/25 group-hover:border-plasma/50 [&>div]:bg-plasma/10 [&>div]:text-plasma-400",
-  cyan: "border-aurora-cyan/20 group-hover:border-aurora-cyan/40 [&>div]:bg-aurora-cyan/10 [&>div]:text-aurora-cyan",
-  violet: "border-aurora-violet/20 group-hover:border-aurora-violet/40 [&>div]:bg-aurora-violet/10 [&>div]:text-aurora-violet",
-  amber: "border-aurora-amber/20 group-hover:border-aurora-amber/40 [&>div]:bg-aurora-amber/10 [&>div]:text-aurora-amber",
+  plasma: "border-plasma/25 hover:border-plasma/50 [&>div]:bg-plasma/10 [&>div]:text-plasma-400",
+  cyan: "border-aurora-cyan/20 hover:border-aurora-cyan/40 [&>div]:bg-aurora-cyan/10 [&>div]:text-aurora-cyan",
+  violet: "border-aurora-violet/20 hover:border-aurora-violet/40 [&>div]:bg-aurora-violet/10 [&>div]:text-aurora-violet",
+  amber: "border-aurora-amber/20 hover:border-aurora-amber/40 [&>div]:bg-aurora-amber/10 [&>div]:text-aurora-amber",
 };
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-void relative overflow-hidden">
-      {/* Subtle grid + glow */}
       <div className="fixed inset-0 bg-grid-void bg-grid pointer-events-none opacity-100" />
       <div className="fixed inset-0 bg-glow-plasma pointer-events-none" />
       <div className="fixed inset-0 bg-glow-cyan pointer-events-none" />
 
       {/* Nav */}
-      <motion.nav
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-8 py-4 border-b border-white/5 bg-void/80 backdrop-blur-xl"
-      >
+      <nav className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-8 py-4 border-b border-white/5 bg-void/80 backdrop-blur-xl">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-plasma/20 border border-plasma/40 flex items-center justify-center">
             <Zap size={16} className="text-plasma-400" />
@@ -73,29 +60,18 @@ export default function LandingPage() {
             <Button size="sm">Get Started <ArrowRight size={14} /></Button>
           </Link>
         </div>
-      </motion.nav>
+      </nav>
 
       {/* Hero */}
       <section className="relative min-h-screen flex items-center justify-center pt-20">
-        {/* 3D Canvas — fills upper half */}
-        <div className="absolute inset-0 z-0">
-          <NeuralScene />
-        </div>
-
-        {/* Radial mask so canvas fades into page */}
         <div className="absolute inset-0 z-10 bg-radial-fade pointer-events-none"
           style={{
             background: "radial-gradient(ellipse 70% 60% at 50% 50%, transparent 0%, rgba(3,5,10,0.6) 70%, rgba(3,5,10,1) 100%)"
           }}
         />
 
-        {/* Hero text */}
         <div className="relative z-20 text-center px-6 max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.7 }}
-          >
+          <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-plasma/30 bg-plasma/10 text-plasma-300 text-xs font-mono mb-8">
               <span className="status-dot recording" />
               Powered by Google Gemini 1.5 Pro
@@ -125,46 +101,30 @@ export default function LandingPage() {
                 </Button>
               </Link>
             </div>
-          </motion.div>
+          </div>
         </div>
 
-        {/* Scroll hint */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 text-white/20"
-        >
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 text-white/20">
           <span className="text-xs font-mono tracking-widest uppercase">Scroll</span>
           <ChevronDown size={16} className="animate-bounce" />
-        </motion.div>
+        </div>
       </section>
 
       {/* Features */}
       <section className="relative z-10 px-6 pb-24 max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
+        <div className="text-center mb-16">
           <h2 className="font-display font-700 text-4xl md:text-5xl text-white mb-4">
             Everything your team needs
           </h2>
           <p className="text-white/40 font-body max-w-lg mx-auto">
             From joining to summarizing — MeetScribe handles the entire pipeline so your team can focus on doing, not note-taking.
           </p>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {features.map((f, i) => (
-            <motion.div
+            <div
               key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1, duration: 0.5 }}
               className={`group glass rounded-2xl p-7 border transition-all duration-300 ${accentStyles[f.accent]}`}
             >
               <div className="w-12 h-12 rounded-xl border flex items-center justify-center mb-5 transition-colors duration-300">
@@ -172,18 +132,12 @@ export default function LandingPage() {
               </div>
               <h3 className="font-display font-700 text-xl text-white mb-3">{f.title}</h3>
               <p className="text-white/40 font-body leading-relaxed text-sm">{f.desc}</p>
-            </motion.div>
+            </div>
           ))}
         </div>
 
         {/* How it works */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mt-24 text-center"
-        >
+        <div className="mt-24 text-center">
           <h2 className="font-display font-700 text-4xl text-white mb-16">How it works</h2>
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-0">
             {[
@@ -204,13 +158,10 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-        </motion.div>
+        </div>
 
         {/* CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+        <div
           className="mt-24 glass rounded-3xl p-12 text-center border border-plasma/20"
           style={{ background: "radial-gradient(ellipse 80% 80% at 50% 50%, rgba(77,107,255,0.07), transparent)" }}
         >
@@ -221,7 +172,7 @@ export default function LandingPage() {
               Start for Free <ArrowRight size={16} />
             </Button>
           </Link>
-        </motion.div>
+        </div>
 
         {/* Footer */}
         <div className="mt-16 flex items-center justify-between text-white/20 text-xs font-mono">
