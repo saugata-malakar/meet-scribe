@@ -23,7 +23,10 @@ if settings.SENTRY_DSN:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
-    await create_tables()
+    try:
+        await create_tables()
+    except Exception as e:
+        print(f"⚠️  Database setup deferred: {e}")
     try:
         from app.services.storage_service import ensure_bucket_exists
         ensure_bucket_exists()
