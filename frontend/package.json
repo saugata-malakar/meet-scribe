@@ -1,0 +1,45 @@
+{
+  "name": "meet-scribe-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org your-org --project meet-scribe-frontend .next && sentry-cli sourcemaps upload --org your-org --project meet-scribe-frontend .next"
+  },
+  "dependencies": {
+    "next": "15.1.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "@clerk/nextjs": "^6.9.0",
+    "three": "^0.170.0",
+    "@react-three/fiber": "^8.17.10",
+    "@react-three/drei": "^9.117.3",
+    "framer-motion": "^11.15.0",
+    "zustand": "^5.0.2",
+    "axios": "^1.7.9",
+    "react-hook-form": "^7.54.2",
+    "zod": "^3.24.1",
+    "@hookform/resolvers": "^3.9.1",
+    "date-fns": "^4.1.0",
+    "react-hot-toast": "^2.4.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.469.0",
+    "posthog-js": "^1.210.0",
+    "@sentry/nextjs": "^8.48.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "^0.170.0",
+    "typescript": "^5",
+    "eslint": "^9",
+    "eslint-config-next": "15.1.0",
+    "tailwindcss": "^3.4.17",
+    "postcss": "^8",
+    "autoprefixer": "^10"
+  }
+}

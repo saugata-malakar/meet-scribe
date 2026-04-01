@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: meet-scribe-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    rootDir: backend
+    envVars:
+      - key: DEBUG
+        value: "false"
+      - key: FRONTEND_URL
+        value: https://meet-scribe.vercel.app
+      - key: DATABASE_URL
+        sync: false
+      - key: CLERK_DOMAIN
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_WEBHOOK_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_CLOUD_PROJECT
+        sync: false
+      - key: GOOGLE_CREDENTIALS_JSON
+        sync: false
+      - key: GCS_BUCKET_NAME
+        value: meet-scribe-storage
+      - key: UPSTASH_REDIS_URL
+        sync: false
+      - key: UPSTASH_REDIS_TOKEN
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX_NAME
+        value: meet-scribe
+      - key: PINECONE_ENVIRONMENT
+        value: us-east-1
+      - key: SENTRY_DSN
+        sync: false
+      - key: BOT_NAME
+        value: "AI Scribe Bot"
+      - key: MAX_CONCURRENT_BOTS
+        value: "3"
+      - key: AUDIO_CHUNK_DURATION_MS
+        value: "10000"
+      - key: MAX_MEETING_DURATION_MINUTES
+        value: "120"
