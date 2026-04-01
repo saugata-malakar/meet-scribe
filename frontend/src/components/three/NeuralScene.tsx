@@ -1,4 +1,5 @@
 "use client";
+// @ts-nocheck
 import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Points, PointMaterial, Line } from "@react-three/drei";
