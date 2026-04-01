@@ -1,7 +1,7 @@
 "use client";
 import { clsx } from "clsx";
 import { Loader2 } from "lucide-react";
-import { forwardRef, InputHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
+import { forwardRef, InputHTMLAttributes, ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 
 // ── Button ──────────────────────────────────────────────────────────────────
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -80,15 +80,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 Input.displayName = "Input";
 
 // ── Card ────────────────────────────────────────────────────────────────────
-export function Card({
-  children,
-  className,
-  glow = false,
-}: {
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   className?: string;
   glow?: boolean;
-}) {
+}
+
+export function Card({ children, className, glow = false, ...props }: CardProps) {
   return (
     <div
       className={clsx(
@@ -96,6 +94,7 @@ export function Card({
         glow && "shadow-card hover:shadow-plasma transition-shadow duration-500",
         className
       )}
+      {...props}
     >
       {children}
     </div>
