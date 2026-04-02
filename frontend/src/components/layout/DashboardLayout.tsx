@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
 import { useAuthStore } from "@/lib/store";
 import {
   LayoutDashboard,
@@ -29,8 +30,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const { user, logout, isAdmin } = useAuthStore();
 
-  const handleLogout = () => {
+  const { signOut } = useClerk();
+
+  const handleLogout = async () => {
     logout();
+    await signOut();
     toast.success("Signed out");
     router.push("/login");
   };
