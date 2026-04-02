@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     # Google Gemini
     GEMINI_API_KEY: str
 
-    # Google Cloud
-    GOOGLE_CLOUD_PROJECT: str
+    # Google Cloud (optional - not needed if using manual transcript + Gemini)
+    GOOGLE_CLOUD_PROJECT: Optional[str] = None
     GOOGLE_APPLICATION_CREDENTIALS: Optional[str] = None
     GOOGLE_CREDENTIALS_JSON: Optional[str] = None  # base64-encoded SA JSON for Render
 

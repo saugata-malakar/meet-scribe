@@ -4,9 +4,17 @@ from typing import Optional
 from app.config import settings
 
 
+def _has_gcs_credentials():
+    """Check if Google Cloud Storage credentials are available."""
+    return bool(settings.GOOGLE_CREDENTIALS_JSON or settings.GOOGLE_APPLICATION_CREDENTIALS)
+
+
 def _get_storage_client():
     from google.cloud import storage
     from google.oauth2 import service_account
+
+    if not _has_gcs_credentials():
+        raise RuntimeError("No GCS credentials configured")
 
     if settings.GOOGLE_CREDENTIALS_JSON:
         creds_json = base64.b64decode(settings.GOOGLE_CREDENTIALS_JSON).decode()
@@ -28,6 +36,9 @@ async def upload_audio_chunk(
     content_type: str = "audio/webm",
 ) -> str:
     """Upload audio chunk to GCS and return the GCS path."""
+    if not _has_gcs_credentials():
+        print("GCS upload skipped: no credentials configured")
+        return ""
     try:
         bucket = _get_bucket()
         blob_path = f"audio/{session_id}/chunk_{chunk_sequence:04d}.webm"
@@ -41,6 +52,9 @@ async def upload_audio_chunk(
 
 async def upload_transcript(session_id: str, transcript: str) -> str:
     """Upload full transcript text to GCS."""
+    if not _has_gcs_credentials():
+        print("GCS transcript upload skipped: no credentials configured")
+        return ""
     try:
         bucket = _get_bucket()
         blob_path = f"transcripts/{session_id}/transcript.txt"
@@ -54,6 +68,9 @@ async def upload_transcript(session_id: str, transcript: str) -> str:
 
 async def upload_summary(session_id: str, summary_data: dict) -> str:
     """Upload summary JSON to GCS."""
+    if not _has_gcs_credentials():
+        print("GCS summary upload skipped: no credentials configured")
+        return ""
     try:
         bucket = _get_bucket()
         blob_path = f"summaries/{session_id}/summary.json"
@@ -67,6 +84,8 @@ async def upload_summary(session_id: str, summary_data: dict) -> str:
 
 async def get_signed_url(gcs_path: str, expiration_minutes: int = 60) -> Optional[str]:
     """Generate a signed URL for accessing a GCS file."""
+    if not _has_gcs_credentials():
+        return None
     try:
         from datetime import timedelta
         bucket = _get_bucket()
@@ -81,6 +100,9 @@ async def get_signed_url(gcs_path: str, expiration_minutes: int = 60) -> Optiona
 
 def ensure_bucket_exists():
     """Create the GCS bucket if it doesn't exist."""
+    if not _has_gcs_credentials():
+        print("GCS bucket setup skipped: no credentials configured")
+        return
     try:
         client = _get_storage_client()
         bucket = client.bucket(settings.GCS_BUCKET_NAME)

@@ -41,7 +41,7 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description="AI-powered Google Meet scribe",
     lifespan=lifespan,
-    docs_url="/docs" if settings.DEBUG else None,
+    docs_url="/docs",
     redoc_url=None,
 )
 
@@ -50,6 +50,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         settings.FRONTEND_URL,
+        "https://chi-square-2.onrender.com",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],

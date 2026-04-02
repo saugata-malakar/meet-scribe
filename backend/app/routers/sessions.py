@@ -10,11 +10,16 @@ from app.database import get_db
 from app.models.session import MeetSession, SessionStatus, TranscriptChunk
 from app.models.user import User
 from app.utils.clerk_auth import get_current_user
+from app.services.summarization_service import generate_summary
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 
 # ─── Schemas ──────────────────────────────────────────────────────────────────
+
+class ManualTranscriptRequest(BaseModel):
+    text: str
+
 
 class SessionCreateRequest(BaseModel):
     meet_url: str
@@ -162,6 +167,53 @@ async def get_session_chunks(
     )
     chunks = result.scalars().all()
     return [ChunkResponse.model_validate(c) for c in chunks]
+
+
+@router.post("/{session_id}/transcript", response_model=SessionResponse)
+async def submit_manual_transcript(
+    session_id: str,
+    body: ManualTranscriptRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Submit a manually pasted transcript for a session and generate a summary."""
+    result = await db.execute(
+        select(MeetSession).where(
+            MeetSession.id == session_id,
+            MeetSession.user_id == current_user.id,
+        )
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if not body.text or not body.text.strip():
+        raise HTTPException(status_code=400, detail="Transcript text cannot be empty")
+
+    # Save the transcript
+    session.full_transcript = body.text.strip()
+    session.status = SessionStatus.processing
+    await db.commit()
+
+    # Generate summary using Gemini
+    try:
+        summary_data = await generate_summary(session.full_transcript)
+        if summary_data:
+            session.summary = summary_data.get("summary", "")
+            session.action_items = summary_data.get("action_items", [])
+            session.key_points = summary_data.get("key_points", [])
+            session.participants = summary_data.get("participants", [])
+            session.sentiment = summary_data.get("sentiment", "neutral")
+            if summary_data.get("title") and not session.title:
+                session.title = summary_data["title"]
+    except Exception as e:
+        print(f"Summary generation failed: {e}")
+        session.summary = "Summary generation failed. Transcript saved successfully."
+
+    session.status = SessionStatus.completed
+    await db.commit()
+    await db.refresh(session)
+    return SessionResponse.model_validate(session)
 
 
 @router.delete("/{session_id}", status_code=204)

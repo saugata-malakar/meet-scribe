@@ -39,30 +39,10 @@ async def launch_bot(
     db: AsyncSession = Depends(get_db),
 ):
     """Launch a bot to join a Google Meet."""
-    # Verify session belongs to user
-    result = await db.execute(
-        select(MeetSession).where(
-            MeetSession.id == body.session_id,
-            MeetSession.user_id == current_user.id,
-        )
+    raise HTTPException(
+        status_code=503,
+        detail="Bot requires Google Cloud credentials and a server with 2GB+ RAM. Please use the manual transcript option instead.",
     )
-    session = result.scalar_one_or_none()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    if session.status not in (SessionStatus.pending, SessionStatus.failed):
-        raise HTTPException(status_code=400, detail=f"Session is already {session.status}")
-
-    try:
-        await bot_service.launch_bot(
-            session_id=str(session.id),
-            meet_url=session.meet_url,
-            db=db,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=429, detail=str(e))
-
-    return {"message": "Bot launched successfully", "session_id": str(session.id)}
 
 
 @router.post("/stop")

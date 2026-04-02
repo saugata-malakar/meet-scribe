@@ -6,10 +6,18 @@ from typing import Optional
 from app.config import settings
 
 
+def _has_speech_credentials():
+    """Check if Google Cloud Speech credentials are available."""
+    return bool(settings.GOOGLE_CREDENTIALS_JSON or settings.GOOGLE_APPLICATION_CREDENTIALS)
+
+
 def _get_speech_client():
     """Initialize Google Cloud Speech client with credentials from env or file."""
     from google.cloud import speech
     from google.oauth2 import service_account
+
+    if not _has_speech_credentials():
+        raise ValueError("No Google Cloud credentials configured. Use manual transcript instead.")
 
     if settings.GOOGLE_CREDENTIALS_JSON:
         # On Render: credentials stored as base64-encoded JSON env var
@@ -35,6 +43,9 @@ async def transcribe_audio_chunk(
     Transcribe an audio chunk using Google Cloud Speech-to-Text.
     Audio should be in WebM/Opus or WAV format.
     """
+    if not _has_speech_credentials():
+        print("Transcription skipped: no Google Cloud credentials configured")
+        return None
     try:
         from google.cloud import speech
 
@@ -74,6 +85,9 @@ async def transcribe_audio_long(
     """
     Transcribe a long audio file stored in GCS using LongRunningRecognize.
     """
+    if not _has_speech_credentials():
+        print("Long transcription skipped: no Google Cloud credentials configured")
+        return None
     try:
         from google.cloud import speech
 
