@@ -32,7 +32,6 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/three": "^0.170.0",
     "autoprefixer": "^10",
     "eslint": "^9.39.4",
     "eslint-config-next": "^15.2.3",
