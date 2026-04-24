@@ -24,6 +24,12 @@ RUN npm ci --legacy-peer-deps
 
 COPY frontend/ .
 
+# Pre-create every directory Next.js treats as optional but that the runtime
+# stage unconditionally copies. If any of these are missing in the source
+# tree, the build would fail with "not found" — this makes the image tolerant
+# of a thin source tree.
+RUN mkdir -p public src/app src/components src/lib src/styles
+
 # Public env vars baked at build time. API / WS URLs intentionally empty so
 # the frontend uses relative paths (same origin as nginx). Clerk key is public.
 ENV NEXT_PUBLIC_API_URL=""
@@ -59,12 +65,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
 
 # ─── Frontend (already built) ──
-WORKDIR /app/frontend
-COPY --from=frontend-build /fe/package.json /fe/package-lock.json /fe/.npmrc ./
-COPY --from=frontend-build /fe/.next ./.next
-COPY --from=frontend-build /fe/public ./public
-COPY --from=frontend-build /fe/next.config.mjs ./
-COPY --from=frontend-build /fe/node_modules ./node_modules
+# Copy the entire build output in one shot. This is more robust than
+# cherry-picking individual files — any optional file/folder that's absent
+# in the source tree simply doesn't appear here, instead of erroring.
+WORKDIR /app
+COPY --from=frontend-build /fe /app/frontend
 
 # ─── Nginx config + launcher ──
 COPY nginx.conf /etc/nginx/nginx.conf
