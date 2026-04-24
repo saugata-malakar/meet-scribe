@@ -33,6 +33,7 @@ from app.config import settings
 from app.models.session import MeetSession, SessionStatus, TranscriptChunk
 from app.services.transcription_service import transcribe_audio_chunk
 from app.services.summarization_service import generate_summary
+from app.services.session_config import SessionConfig, load as load_session_config
 from app.services.storage_service import (
     upload_audio_chunk,
     upload_transcript,
@@ -436,8 +437,9 @@ async def process_audio_chunk(
     # Best-effort upload to GCS (no-op without creds).
     gcs_path = await upload_audio_chunk(session_id, sequence, audio_bytes, mime_type)
 
-    # Transcribe (Google STT first, Gemini fallback, else None).
-    text = await transcribe_audio_chunk(audio_bytes, mime_type=mime_type) or ""
+    # Transcribe using the per-session config (speakers, languages, etc).
+    cfg = load_session_config(session_id)
+    text = await transcribe_audio_chunk(audio_bytes, mime_type=mime_type, config=cfg) or ""
 
     chunk = TranscriptChunk(
         session_id=session_id,
@@ -470,7 +472,8 @@ async def finalize_session(
     if full_transcript:
         await upload_transcript(session_id, full_transcript)
         try:
-            summary_data = await generate_summary(full_transcript)
+            cfg = load_session_config(session_id)
+            summary_data = await generate_summary(full_transcript, config=cfg)
             if summary_data:
                 await upload_summary(session_id, summary_data)
         except Exception as e:

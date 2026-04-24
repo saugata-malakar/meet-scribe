@@ -9,10 +9,13 @@ export function registerTokenGetter(fn: () => Promise<string | null>) {
   _getToken = fn;
 }
 
+// Render free tier cold starts can take 40-60s. Give the backend room to wake
+// up before axios gives up with "timeout of 30000 ms exceeded". Most calls
+// finish in under a second; this ceiling only matters after idle periods.
 export const api = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 30000,
+  timeout: 90000,
 });
 
 // Inject Clerk token before every request
@@ -23,6 +26,19 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+// If NEXT_PUBLIC_WS_URL isn't set, derive the WS URL from the HTTP API URL so
+// production deployments don't default to ws://localhost:8000 (which would
+// make live capture silently fail).
+function deriveWsUrl(httpUrl: string): string {
+  try {
+    const u = new URL(httpUrl);
+    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+    return u.toString().replace(/\/$/, "");
+  } catch {
+    return "ws://localhost:8000";
+  }
+}
 
 // Sessions
 export const sessionsApi = {
@@ -45,9 +61,27 @@ export interface LaunchBotResponse {
   already_active?: boolean;
 }
 
+export interface ScribeConfig {
+  language?: string;
+  additional_languages?: string[];
+  summary_language?: string;
+  speaker_hints?: string[];
+  summary_style?: "brief" | "standard" | "detailed";
+  summary_audience?: string;
+  long_meeting_mode?: boolean;
+  extra_instructions?: string;
+}
+
 export const botApi = {
-  launch: (session_id: string, mode?: "browser" | "playwright") =>
-    api.post<LaunchBotResponse>("/api/bot/launch", { session_id, mode }),
+  launch: (
+    session_id: string,
+    opts?: { mode?: "browser" | "playwright"; config?: ScribeConfig }
+  ) =>
+    api.post<LaunchBotResponse>("/api/bot/launch", {
+      session_id,
+      mode: opts?.mode,
+      config: opts?.config,
+    }),
   stop: (session_id: string) => api.post("/api/bot/stop", { session_id }),
 };
 
@@ -70,4 +104,14 @@ export const searchApi = {
 };
 
 export const WS_URL =
-  process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
+  process.env.NEXT_PUBLIC_WS_URL || deriveWsUrl(API_URL);
+
+// Warm the backend (wake Render's free-tier dyno) so the next real call
+// doesn't hit a cold-start timeout. Safe to call on dashboard mount.
+export async function warmBackend(): Promise<void> {
+  try {
+    await fetch(`${API_URL}/health`, { method: "GET", mode: "cors" });
+  } catch {
+    /* best-effort */
+  }
+}

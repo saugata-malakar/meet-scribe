@@ -32,6 +32,7 @@ from app.models.session import MeetSession, SessionStatus, TranscriptChunk
 from app.models.user import User
 from app.utils.clerk_auth import get_current_user, _verify_token as verify_clerk_token
 from app.services import bot_service
+from app.services.session_config import SessionConfig, save as save_session_config
 
 
 async def _authenticate_ws(token: str) -> Optional[str]:
@@ -55,9 +56,21 @@ router = APIRouter(prefix="/api/bot", tags=["bot"])
 
 # ─── Schemas ──────────────────────────────────────────────────────────────────
 
+class ScribeConfigInput(BaseModel):
+    language: Optional[str] = "auto"
+    additional_languages: Optional[list[str]] = None
+    summary_language: Optional[str] = "same"
+    speaker_hints: Optional[list[str]] = None
+    summary_style: Optional[str] = "standard"  # brief | standard | detailed
+    summary_audience: Optional[str] = ""
+    long_meeting_mode: Optional[bool] = False
+    extra_instructions: Optional[str] = ""
+
+
 class LaunchBotRequest(BaseModel):
     session_id: str
     mode: Optional[str] = None  # "browser" | "playwright"
+    config: Optional[ScribeConfigInput] = None
 
 
 class StopBotRequest(BaseModel):
@@ -94,6 +107,13 @@ async def launch_bot(
     session = result.scalar_one_or_none()
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    # Persist per-session customization (languages, speakers, summary style,
+    # etc). Stored in Redis (with in-memory fallback) and read by the
+    # transcription + summarization pipelines.
+    if body.config is not None:
+        cfg_payload = {k: v for k, v in body.config.model_dump().items() if v is not None}
+        save_session_config(str(session.id), SessionConfig.from_dict(cfg_payload))
 
     if session.status in (SessionStatus.recording, SessionStatus.joining):
         # Already live — idempotent: hand back the stream info.
