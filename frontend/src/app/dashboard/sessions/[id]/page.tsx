@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button, Card, Badge, Skeleton } from "@/components/ui";
+import LiveCaptureController from "@/components/ui/LiveCaptureController";
 import { sessionsApi, botApi, WS_URL } from "@/lib/api";
 import { useApiSetup } from "@/lib/useApiSetup";
 import { useAuth } from "@clerk/nextjs";
@@ -181,8 +182,12 @@ ${session.full_transcript ?? "Not available"}
           className="flex items-center justify-between mb-8"
         >
           <div className="flex items-center gap-3">
-            <Link href="/dashboard/sessions">
-              <button className="text-white/30 hover:text-white/70 transition-colors">
+            <Link href="/dashboard/sessions" aria-label="Back to sessions">
+              <button
+                type="button"
+                aria-label="Back to sessions"
+                className="text-white/30 hover:text-white/70 transition-colors"
+              >
                 <ArrowLeft size={20} />
               </button>
             </Link>
@@ -239,6 +244,22 @@ ${session.full_transcript ?? "Not available"}
           </Card>
         </motion.div>
 
+        {/* Live capture controller — shown while the session is active */}
+        {["pending", "joining", "recording"].includes(session.status) && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mb-6"
+          >
+            <LiveCaptureController
+              sessionId={session.id}
+              meetUrl={session.meet_url}
+              onStopped={() => loadSession()}
+            />
+          </motion.div>
+        )}
+
         {/* Processing state */}
         {session.status === "processing" && (
           <Card className="mb-6 flex items-center gap-4 border-aurora-amber/20">
@@ -256,6 +277,7 @@ ${session.full_transcript ?? "Not available"}
         <div className="flex gap-1 mb-6 p-1 glass rounded-xl w-fit">
           {tabs.map((t) => (
             <button
+              type="button"
               key={t.id}
               onClick={() => {
                 setActiveTab(t.id);

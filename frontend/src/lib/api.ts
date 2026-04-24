@@ -37,8 +37,17 @@ export const sessionsApi = {
 };
 
 // Bot
+export interface LaunchBotResponse {
+  mode: "browser" | "playwright";
+  session_id: string;
+  ws_path?: string;
+  meet_url?: string;
+  already_active?: boolean;
+}
+
 export const botApi = {
-  launch: (session_id: string) => api.post("/api/bot/launch", { session_id }),
+  launch: (session_id: string, mode?: "browser" | "playwright") =>
+    api.post<LaunchBotResponse>("/api/bot/launch", { session_id, mode }),
   stop: (session_id: string) => api.post("/api/bot/stop", { session_id }),
 };
 
