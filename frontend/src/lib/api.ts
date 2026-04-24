@@ -1,6 +1,17 @@
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Same-origin by default in production: when the frontend + backend are
+// served behind a single nginx (the combined Docker image), leave
+// NEXT_PUBLIC_API_URL empty and all requests use relative paths ("/api/…").
+// Only fall back to localhost during local dev (`npm run dev`) when nothing
+// is set.
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL =
+  RAW_API_URL && RAW_API_URL.trim().length > 0
+    ? RAW_API_URL
+    : typeof window !== "undefined"
+      ? "" // browser: use relative URLs against current origin
+      : "http://localhost:8000"; // SSR / build step fallback
 
 // Token getter registered by useApiSetup (Clerk's getToken)
 let _getToken: (() => Promise<string | null>) | null = null;
@@ -27,10 +38,21 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// If NEXT_PUBLIC_WS_URL isn't set, derive the WS URL from the HTTP API URL so
-// production deployments don't default to ws://localhost:8000 (which would
-// make live capture silently fail).
+// If NEXT_PUBLIC_WS_URL isn't set, derive the WS URL from either:
+//   1. the configured API URL (if absolute), or
+//   2. the current window.location (when API_URL is relative / same-origin).
+// This keeps live capture working in all three deployment shapes:
+//   - combined Docker image (same origin, wss://same-host)
+//   - split deploy with explicit NEXT_PUBLIC_WS_URL
+//   - local dev with both services on localhost
 function deriveWsUrl(httpUrl: string): string {
+  if (!httpUrl || httpUrl.trim().length === 0) {
+    if (typeof window !== "undefined") {
+      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      return `${proto}//${window.location.host}`;
+    }
+    return "ws://localhost:8000";
+  }
   try {
     const u = new URL(httpUrl);
     u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
@@ -108,9 +130,11 @@ export const WS_URL =
 
 // Warm the backend (wake Render's free-tier dyno) so the next real call
 // doesn't hit a cold-start timeout. Safe to call on dashboard mount.
+// In combined-origin mode API_URL is empty string, which makes fetch hit the
+// same origin — exactly what we want.
 export async function warmBackend(): Promise<void> {
   try {
-    await fetch(`${API_URL}/health`, { method: "GET", mode: "cors" });
+    await fetch(`${API_URL || ""}/health`, { method: "GET" });
   } catch {
     /* best-effort */
   }
