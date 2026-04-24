@@ -12,9 +12,8 @@ import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button, Card, Badge, Skeleton } from "@/components/ui";
 import LiveCaptureController from "@/components/ui/LiveCaptureController";
-import { sessionsApi, botApi, WS_URL } from "@/lib/api";
+import { sessionsApi, botApi } from "@/lib/api";
 import { useApiSetup } from "@/lib/useApiSetup";
-import { useAuth } from "@clerk/nextjs";
 
 interface Session {
   id: string; title?: string; meet_url: string; status: string;
@@ -40,13 +39,11 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
   useApiSetup();
   const { id } = use(params);
   const router = useRouter();
-  const { getToken } = useAuth();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [stopping, setStopping] = useState(false);
   const [activeTab, setActiveTab] = useState<"summary" | "transcript" | "chunks">("summary");
   const [chunks, setChunks] = useState<{ id: string; sequence: number; text: string; speaker?: string }[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
 
   const loadSession = async () => {
     try {
@@ -60,40 +57,19 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  // WebSocket for live status updates
+  // Poll while the session is live (no WebSocket server — just HTTP poll).
   useEffect(() => {
-    let ws: WebSocket;
-
-    const connect = async () => {
-      const token = await getToken();
-      if (!token) return;
-
-      ws = new WebSocket(`${WS_URL}/api/bot/ws/${id}`);
-      wsRef.current = ws;
-
-      ws.onopen = () => ws.send(token);
-      ws.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        if (data.error) return;
-        setSession(prev => prev ? {
-          ...prev,
-          status: data.status,
-          title: data.title ?? prev.title,
-          summary: data.summary ?? prev.summary,
-          sentiment: data.sentiment ?? prev.sentiment,
-        } : prev);
-        if (["completed", "failed", "stopped"].includes(data.status)) {
-          loadSession(); // Reload full session when done
-          ws.close();
-        }
-      };
-      ws.onerror = () => ws.close();
-    };
-
-    connect();
     loadSession();
-
-    return () => { if (wsRef.current) wsRef.current.close(); };
+    const timer = setInterval(() => {
+      setSession((prev) => {
+        if (!prev) return prev;
+        if (!["joining", "recording", "processing"].includes(prev.status)) return prev;
+        loadSession();
+        return prev;
+      });
+    }, 4000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleStop = async () => {

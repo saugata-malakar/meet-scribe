@@ -27,6 +27,10 @@ export const api = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
   timeout: 90000,
+  // Same-origin cookies (Clerk's __session) are used by our Next.js API
+  // routes via Clerk's server `auth()`. withCredentials is a no-op for
+  // same-origin but harmless, and future-proofs for split deploys.
+  withCredentials: true,
 });
 
 // Inject Clerk token before every request
