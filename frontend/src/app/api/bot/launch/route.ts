@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getSession, updateSession } from "@/lib/server/sessionStore";
 import type { ScribeConfig } from "@/lib/server/sessionStore";
+import { launchBot, isBotActive } from "@/lib/server/meetBot";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,16 +26,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: "Session not found" }, { status: 404 });
   }
 
-  updateSession(sessionId, {
-    status: "joining",
-    config: body.config ?? s.config,
-  });
+  // Persist the scribe config now so the chunk + finalize routes pick it up.
+  updateSession(sessionId, { config: body.config ?? s.config });
 
-  // Browser mode — frontend does tab-audio capture itself and POSTs chunks.
+  if (isBotActive(sessionId)) {
+    return NextResponse.json({
+      mode: "playwright",
+      session_id: sessionId,
+      already_active: true,
+    });
+  }
+
+  const result = await launchBot(sessionId, s.meetUrl);
+  if (!result.ok) {
+    updateSession(sessionId, { status: "failed", errorMessage: result.error });
+    return NextResponse.json({ detail: result.error }, { status: 500 });
+  }
+
   return NextResponse.json({
-    mode: "browser",
+    mode: "playwright",
     session_id: sessionId,
-    chunk_endpoint: `/api/bot/chunk`,
     meet_url: s.meetUrl,
   });
 }

@@ -1,0 +1,45 @@
+# Fly.io deployment config — free tier supports the Chromium-based bot.
+#
+# Quickstart:
+#   1. Install flyctl: https://fly.io/docs/flyctl/install/
+#   2. flyctl auth signup
+#   3. From this directory: flyctl launch --copy-config --no-deploy
+#      (accept defaults; it will pick this fly.toml up)
+#   4. Set secrets:
+#        flyctl secrets set GEMINI_API_KEY=xxx
+#        flyctl secrets set CLERK_SECRET_KEY=xxx
+#   5. flyctl deploy
+#
+# Free allowance: 3 shared-cpu-1x VMs at 256MB each. We bump to 1024MB which
+# costs ~$2/mo (Fly bills you only for what's actually allocated; the first
+# $5/mo is free credit).
+
+app = "meet-scribe"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "10000"
+  BOT_NAME = "AI Scribe Bot"
+  BOT_HEADLESS = "true"
+  NODE_OPTIONS = "--max-old-space-size=900"
+
+[http_service]
+  internal_port = 10000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+# Chromium needs more RAM than the free 256MB default. 1GB is the sweet spot.
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 1024

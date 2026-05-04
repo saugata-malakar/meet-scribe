@@ -65,6 +65,8 @@ export default function SessionDetailPage({ params }: { params: Promise<{ id: st
         if (!prev) return prev;
         if (!["joining", "recording", "processing"].includes(prev.status)) return prev;
         loadSession();
+        // Also poll chunks during recording so the live feed updates.
+        if (prev.status === "recording") loadChunks();
         return prev;
       });
     }, 4000);
@@ -231,6 +233,9 @@ ${session.full_transcript ?? "Not available"}
             <LiveCaptureController
               sessionId={session.id}
               meetUrl={session.meet_url}
+              status={session.status}
+              chunkCount={chunks.length}
+              lastTranscript={chunks[chunks.length - 1]?.text}
               onStopped={() => loadSession()}
             />
           </motion.div>

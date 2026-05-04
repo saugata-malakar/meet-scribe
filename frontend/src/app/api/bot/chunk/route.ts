@@ -1,34 +1,28 @@
 /**
- * Receives one audio chunk from the live-capture controller in the browser.
- * Body: multipart/form-data with fields:
- *   - session_id: string
- *   - sequence: integer (as string)
- *   - audio: Blob (audio/webm;opus, ~5s)
+ * Receives one audio chunk.
  *
- * We send the blob to Gemini for transcription and append the resulting text
- * to the session's chunk list.
+ * Two callers:
+ *   1. The server-side Playwright bot (running inside the same Node process)
+ *      — its Chromium has no Clerk session, so it sends an `internal_token`
+ *      we minted for its session at launch time.
+ *   2. The fallback user-side LiveCaptureController — has a Clerk session.
  */
 
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getSession, addChunk } from "@/lib/server/sessionStore";
 import { transcribeAudio } from "@/lib/server/gemini";
+import { verifyInternalToken } from "@/lib/server/meetBot";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// Allow audio payloads a bit larger than Next's default.
 export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
-  }
-
   let form: FormData;
   try {
     form = await request.formData();
-  } catch (e) {
+  } catch {
     return NextResponse.json(
       { detail: "Expected multipart/form-data" },
       { status: 400 },
@@ -38,6 +32,7 @@ export async function POST(request: Request) {
   const sessionId = String(form.get("session_id") ?? "");
   const seqRaw = form.get("sequence");
   const audio = form.get("audio");
+  const internalToken = form.get("internal_token");
 
   if (!sessionId || seqRaw === null || !(audio instanceof Blob)) {
     return NextResponse.json(
@@ -47,8 +42,19 @@ export async function POST(request: Request) {
   }
 
   const s = getSession(sessionId);
-  if (!s || s.userId !== userId) {
+  if (!s) {
     return NextResponse.json({ detail: "Session not found" }, { status: 404 });
+  }
+
+  // Authorize: either the server-side bot's internal token, or the session's
+  // Clerk-authenticated owner.
+  const tokenStr = typeof internalToken === "string" ? internalToken : null;
+  const isBot = verifyInternalToken(sessionId, tokenStr);
+  if (!isBot) {
+    const { userId } = await auth();
+    if (!userId || s.userId !== userId) {
+      return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
+    }
   }
 
   const sequence = Number(seqRaw);
