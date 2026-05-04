@@ -58,6 +58,7 @@ export async function launchBot(
   try {
     browser = await chromium.launch({
       headless: HEADLESS,
+      proxy: process.env.PROXY_URL ? { server: process.env.PROXY_URL } : undefined,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",

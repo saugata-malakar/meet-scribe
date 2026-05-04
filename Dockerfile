@@ -16,6 +16,7 @@ FROM node:20-bookworm-slim
 # Playwright's Chromium needs a bunch of system libs.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    curl \
     fonts-liberation \
     libasound2 \
     libatk-bridge2.0-0 \
@@ -41,6 +42,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdg-utils \
     xvfb \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Tailscale for bypass
+RUN curl -fsSL https://tailscale.com/install.sh | sh
+
 
 WORKDIR /app
 
@@ -75,7 +80,11 @@ RUN npm run build
 ENV PORT=10000
 EXPOSE 10000
 
+COPY start.sh .
+RUN chmod +x start.sh
+
 # Start Xvfb on display :99 and run Next under it. Headless Chromium can
 # work without Xvfb but Meet sometimes refuses headless UAs; running with
 # Xvfb gives us a real display we can fall back to a non-headless launch on.
-CMD ["sh", "-c", "Xvfb :99 -screen 0 1280x720x24 -ac & export DISPLAY=:99 && npx next start -H 0.0.0.0 -p ${PORT:-10000}"]
+CMD ["./start.sh"]
+
