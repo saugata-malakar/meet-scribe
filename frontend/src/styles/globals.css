@@ -36,6 +36,31 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Input autofill — Chrome repaints autofilled inputs with its own white
+   background, which on our dark UI made text invisible. Force our colors
+   and kill the white repaint. Applied to every input + textarea. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f1f3ff !important;
+  caret-color: #f1f3ff !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.06) inset !important;
+  box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.06) inset !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Baseline for every input/textarea — never inherit a light-on-light combo
+   even if some browser extension or OS style tries to override. */
+input.ms-input,
+textarea.ms-input {
+  color: #f1f3ff;
+  caret-color: #f1f3ff;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

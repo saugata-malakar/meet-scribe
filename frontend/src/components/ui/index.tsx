@@ -61,12 +61,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           className={clsx(
-            "w-full bg-white/4 border rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/20",
+            "ms-input",
+            "w-full border rounded-lg px-3 py-2.5 text-sm",
+            "bg-[rgba(255,255,255,0.06)] text-white placeholder-white/30",
             "focus:outline-none focus:ring-1 transition-all duration-200",
             "font-body",
             error
               ? "border-aurora-rose/50 focus:border-aurora-rose focus:ring-aurora-rose/20"
-              : "border-white/8 focus:border-plasma/60 focus:ring-plasma/20 hover:border-white/15",
+              : "border-white/15 focus:border-plasma/60 focus:ring-plasma/20 hover:border-white/25",
             icon && "pl-9",
             className
           )}

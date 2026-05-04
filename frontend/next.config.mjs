@@ -1,5 +1,3 @@
-import { withSentryConfig } from "@sentry/nextjs";
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -22,13 +20,18 @@ const nextConfig = {
       ],
     }];
   },
+  // Audio chunks uploaded from the live-capture controller are ~5s of
+  // webm/opus, which can easily exceed Next's 1MB default for route handlers.
+  experimental: {
+    serverActions: { bodySizeLimit: "15mb" },
+  },
+  // Expose /health at the top level so Render's default health check hits
+  // our /api/health route handler.
+  async rewrites() {
+    return [
+      { source: "/health", destination: "/api/health" },
+    ];
+  },
 };
 
-export default withSentryConfig(nextConfig, {
-  org: process.env.SENTRY_ORG,
-  project: "meet-scribe-frontend",
-  silent: true,
-  widenClientFileUpload: true,
-  hideSourceMaps: true,
-  disableLogger: true,
-});
+export default nextConfig;

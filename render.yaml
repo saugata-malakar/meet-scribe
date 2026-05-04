@@ -1,19 +1,21 @@
+# Single combined service: nginx reverse-proxies between the Next.js
+# frontend (/, /dashboard, etc) and the FastAPI backend (/api/*, /health,
+# /docs). Built from ./Dockerfile at the repo root.
 services:
   - type: web
-    name: meet-scribe-backend
+    name: meet-scribe
     env: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    plan: starter
+    plan: free
     region: oregon
     healthCheckPath: /health
     autoDeploy: true
-    rootDir: backend
     envVars:
       - key: DEBUG
         value: "false"
       - key: FRONTEND_URL
-        value: https://meet-scribe.vercel.app
+        value: https://chi-square-2.onrender.com
       - key: DATABASE_URL
         sync: false
       - key: CLERK_DOMAIN
@@ -42,6 +44,8 @@ services:
         value: us-east-1
       - key: SENTRY_DSN
         sync: false
+      - key: BOT_MODE
+        value: "browser"
       - key: BOT_NAME
         value: "AI Scribe Bot"
       - key: MAX_CONCURRENT_BOTS

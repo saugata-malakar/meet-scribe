@@ -1,6 +1,17 @@
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Same-origin by default in production: when the frontend + backend are
+// served behind a single nginx (the combined Docker image), leave
+// NEXT_PUBLIC_API_URL empty and all requests use relative paths ("/api/…").
+// Only fall back to localhost during local dev (`npm run dev`) when nothing
+// is set.
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL =
+  RAW_API_URL && RAW_API_URL.trim().length > 0
+    ? RAW_API_URL
+    : typeof window !== "undefined"
+      ? "" // browser: use relative URLs against current origin
+      : "http://localhost:8000"; // SSR / build step fallback
 
 // Token getter registered by useApiSetup (Clerk's getToken)
 let _getToken: (() => Promise<string | null>) | null = null;
@@ -9,10 +20,17 @@ export function registerTokenGetter(fn: () => Promise<string | null>) {
   _getToken = fn;
 }
 
+// Render free tier cold starts can take 40-60s. Give the backend room to wake
+// up before axios gives up with "timeout of 30000 ms exceeded". Most calls
+// finish in under a second; this ceiling only matters after idle periods.
 export const api = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 30000,
+  timeout: 90000,
+  // Same-origin cookies (Clerk's __session) are used by our Next.js API
+  // routes via Clerk's server `auth()`. withCredentials is a no-op for
+  // same-origin but harmless, and future-proofs for split deploys.
+  withCredentials: true,
 });
 
 // Inject Clerk token before every request
@@ -23,6 +41,30 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+// If NEXT_PUBLIC_WS_URL isn't set, derive the WS URL from either:
+//   1. the configured API URL (if absolute), or
+//   2. the current window.location (when API_URL is relative / same-origin).
+// This keeps live capture working in all three deployment shapes:
+//   - combined Docker image (same origin, wss://same-host)
+//   - split deploy with explicit NEXT_PUBLIC_WS_URL
+//   - local dev with both services on localhost
+function deriveWsUrl(httpUrl: string): string {
+  if (!httpUrl || httpUrl.trim().length === 0) {
+    if (typeof window !== "undefined") {
+      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      return `${proto}//${window.location.host}`;
+    }
+    return "ws://localhost:8000";
+  }
+  try {
+    const u = new URL(httpUrl);
+    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+    return u.toString().replace(/\/$/, "");
+  } catch {
+    return "ws://localhost:8000";
+  }
+}
 
 // Sessions
 export const sessionsApi = {
@@ -37,8 +79,35 @@ export const sessionsApi = {
 };
 
 // Bot
+export interface LaunchBotResponse {
+  mode: "browser" | "playwright";
+  session_id: string;
+  ws_path?: string;
+  meet_url?: string;
+  already_active?: boolean;
+}
+
+export interface ScribeConfig {
+  language?: string;
+  additional_languages?: string[];
+  summary_language?: string;
+  speaker_hints?: string[];
+  summary_style?: "brief" | "standard" | "detailed";
+  summary_audience?: string;
+  long_meeting_mode?: boolean;
+  extra_instructions?: string;
+}
+
 export const botApi = {
-  launch: (session_id: string) => api.post("/api/bot/launch", { session_id }),
+  launch: (
+    session_id: string,
+    opts?: { mode?: "browser" | "playwright"; config?: ScribeConfig }
+  ) =>
+    api.post<LaunchBotResponse>("/api/bot/launch", {
+      session_id,
+      mode: opts?.mode,
+      config: opts?.config,
+    }),
   stop: (session_id: string) => api.post("/api/bot/stop", { session_id }),
 };
 
@@ -61,4 +130,16 @@ export const searchApi = {
 };
 
 export const WS_URL =
-  process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
+  process.env.NEXT_PUBLIC_WS_URL || deriveWsUrl(API_URL);
+
+// Warm the backend (wake Render's free-tier dyno) so the next real call
+// doesn't hit a cold-start timeout. Safe to call on dashboard mount.
+// In combined-origin mode API_URL is empty string, which makes fetch hit the
+// same origin — exactly what we want.
+export async function warmBackend(): Promise<void> {
+  try {
+    await fetch(`${API_URL || ""}/health`, { method: "GET" });
+  } catch {
+    /* best-effort */
+  }
+}

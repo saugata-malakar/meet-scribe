@@ -46,6 +46,10 @@ app = FastAPI(
 )
 
 # ─── Middleware ───────────────────────────────────────────────────────────────
+# Same-origin deployments (combined nginx image) don't hit CORS at all.
+# For split deployments, allow the configured FRONTEND_URL plus any
+# *.onrender.com / *.vercel.app host so a URL rename doesn't silently
+# break the frontend again.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -54,6 +58,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],
+    allow_origin_regex=r"https://[a-zA-Z0-9-]+\.(onrender\.com|vercel\.app)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

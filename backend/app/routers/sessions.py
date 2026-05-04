@@ -11,6 +11,7 @@ from app.models.session import MeetSession, SessionStatus, TranscriptChunk
 from app.models.user import User
 from app.utils.clerk_auth import get_current_user
 from app.services.summarization_service import generate_summary
+from app.services.session_config import SessionConfig, load as load_session_config
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -195,9 +196,10 @@ async def submit_manual_transcript(
     session.status = SessionStatus.processing
     await db.commit()
 
-    # Generate summary using Gemini
+    # Generate summary using Gemini, honoring any saved per-session config.
     try:
-        summary_data = await generate_summary(session.full_transcript)
+        cfg = load_session_config(str(session.id))
+        summary_data = await generate_summary(session.full_transcript, config=cfg)
         if summary_data:
             session.summary = summary_data.get("summary", "")
             session.action_items = summary_data.get("action_items", [])

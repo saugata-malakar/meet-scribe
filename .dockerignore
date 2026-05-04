@@ -1,0 +1,14 @@
+# Never ship host build artifacts; the image rebuilds them from source.
+**/node_modules
+**/.next
+**/.vercel
+**/__pycache__
+**/*.pyc
+**/.venv
+**/venv
+**/.env
+**/.env.local
+.git
+.github
+*.md
+!README.md

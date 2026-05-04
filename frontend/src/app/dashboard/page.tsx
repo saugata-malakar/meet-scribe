@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button, Card, StatCard, Badge, Skeleton } from "@/components/ui";
 import { useApiSetup } from "@/lib/useApiSetup";
-import { sessionsApi } from "@/lib/api";
+import { sessionsApi, warmBackend } from "@/lib/api";
 import NewSessionModal from "@/components/ui/NewSessionModal";
 
 interface Stats { total_sessions: number; completed_sessions: number; total_minutes_recorded: number; }
@@ -44,7 +44,12 @@ export default function DashboardPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    // Kick Render's free-tier dyno awake so the first /launch call doesn't
+    // hit a cold-start timeout while the user is filling in the modal.
+    warmBackend();
+    load();
+  }, []);
 
   const name = user?.firstName || user?.fullName?.split(" ")[0] || "there";
   const hour = new Date().getHours();
